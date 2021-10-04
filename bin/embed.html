@@ -5,6 +5,7 @@
 
 html {
     background-color: #3d3d3d;
+    font-family: sans-serif;
 }
 
 #canvas {
@@ -15,7 +16,14 @@ html {
     margin: 0;
     padding: 0;
     margin-bottom: 1rem;
+}
 
+#canvas-wrapper {
+    overflow: auto;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    text-align: center;
 }
 
 #stdout-wrapper, #stderr-wrapper {
@@ -23,7 +31,7 @@ html {
     background-color: #4d4d4d;
     font-size: 1.25rem;
     font-weight: 400;
-    font-family: 'sans';
+    font-family: sans-serif;
     min-height: 2rem;
     margin-bottom: 1rem;
     border-radius: 5px;
@@ -33,7 +41,7 @@ html {
 
 #about {
     color: white;
-    font-family: 'sans';
+    font-family: sans-serif;
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -90,7 +98,7 @@ details[open] summary:after {
     display: flex;
     color: #ddd;
     background-color: #2a2a2a;
-    font-family: 'sans';
+    font-family: sans-serif;
     font-size: 0.9rem;
     margin: 0;
     border-radius: 0.35rem;
@@ -119,7 +127,9 @@ details[open] summary:after {
     </body>
     <div id='flex-container'>
         <div id='align'>
-            <canvas id='canvas'></canvas>
+            <div id='canvas-wrapper'>
+                <canvas id='canvas'></canvas>
+            </div>
             <details id='stdout-wrapper'>
                 <summary>Standard Output</summary>
                 <div id='stdout'></div>
