@@ -1,0 +1,185 @@
+<html>
+    <head>
+        <meta charset='utf-8'>
+        <style>
+
+html {
+    background-color: #3d3d3d;
+}
+
+#canvas {
+    width: 500px;
+    height: 500px;
+    border: 1px solid black;
+    background-color: gray;
+    margin: 0;
+    padding: 0;
+    margin-bottom: 1rem;
+
+}
+
+#stdout-wrapper, #stderr-wrapper {
+    color: #ddd;
+    background-color: #4d4d4d;
+    font-size: 1.25rem;
+    font-weight: 400;
+    font-family: 'sans';
+    min-height: 2rem;
+    margin-bottom: 1rem;
+    border-radius: 5px;
+    border: 1px solid black;
+    width: 100%;
+}
+
+#about {
+    color: white;
+    font-family: 'sans';
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+details>summary {
+    list-style: none;
+}
+
+pre {
+    display: inline-block;
+    font-size: 1rem;
+    font-family: "mono";
+    background-color: #2d2d2d;
+    padding: 0.25rem;
+    margin: 0;
+    border-radius: 4px;
+    border: 1px solid black;
+    line-height: 1rem;
+}
+
+summary {
+    cursor: pointer;
+    padding: 0.5rem;
+}
+
+summary::after {
+    content: '▲';
+    float: right;
+}
+
+details[open] summary:after {
+    content: '▼';
+}
+
+#stdout, #stderr {
+    min-height: 100px;
+    border-top: 1px solid black;
+    max-height: 500px;
+    overflow: auto;
+}
+
+#stderr {
+    color: #ddaaaa;
+}
+
+#align {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+#warning {
+    display: flex;
+    color: #ddd;
+    background-color: #2a2a2a;
+    font-family: 'sans';
+    font-size: 0.9rem;
+    margin: 0;
+    border-radius: 0.35rem;
+    border: 1px solid black;
+    padding: 0.5rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    align-self: center
+}
+
+#warn-icon {
+    font-size: 1.0rem;
+    align-self: center;
+    line-height: 1;
+    margin-right: 0.45rem;
+}
+
+#flex-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+        </style>
+    </head>
+    </body>
+    <div id='flex-container'>
+        <div id='align'>
+            <canvas id='canvas'></canvas>
+            <details id='stdout-wrapper'>
+                <summary>Standard Output</summary>
+                <div id='stdout'></div>
+            </details>
+            <details id='stderr-wrapper'>
+                <summary>Standard Error</summary>
+                <div id='stderr'></div>
+            </details>
+            <div id='warning'><span id='warn-icon'>⚠</span><div>Opening the developer console causes severe slowdowns!</div></div>
+        </div>
+        <div id='about'>
+            <div>
+                <h4 style='margin-top: 1rem;'>About</h4>
+                <p>Paste code into the left editor or select an example from the drop down, then click the run button. Once compiled the render will show on the right-side canvas. Any errors will be shown in the "Standard Error" details pane, which automatically expands on errors. The following variables come predefined when the code is loaded:
+                </p>
+                <p>
+                <pre>webgl_ctx</pre> - An object of type <pre>WebGL.renderingContext Js.t</pre>. It is the WebGL context for the canvas on the right.
+                </p>
+            </div>
+        </div>
+    </div>
+    <script defer type='text/javascript'>
+        var stdout = document.getElementById('stdout');
+        var stderr = document.getElementById('stderr');
+        var canvas = document.getElementById('canvas');
+
+        var stdout_wrapper = document.getElementById('stdout-wrapper');
+        var stderr_wrapper = document.getElementById('stderr-wrapper');
+
+        function resizeCanvas(canvas)
+        {
+            let devicePixelRatio = window.devicePixelRatio;
+            let rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * devicePixelRatio;
+            canvas.height =rect.height * devicePixelRatio;
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+        }
+
+        resizeCanvas(canvas);
+
+        var webgl_ctx = canvas.getContext('webgl', {stencil: true});
+
+        function cancelAllAnimationFrames(){
+            var id = window.requestAnimationFrame(function(){});
+            while(id--) {
+                window.cancelAnimationFrame(id);
+            }
+        }
+
+        window.addEventListener('message', function(msg) {
+            stdout.innerText = '';
+            stderr.innerText = '';
+            cancelAllAnimationFrames();
+            evaluator.execute(msg.data.code);
+
+            stdout_wrapper.open = stdout.innerText.length > 0;
+            stderr_wrapper.open = stderr.innerText.length > 0;
+        });
+    </script>
+    <script defer type="text/javascript" src="eval.js"></script>
+    </body>
+</html>

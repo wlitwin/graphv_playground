@@ -1,0 +1,371 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+          "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Graphv Playground</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.13/ace.min.js" integrity="sha512-jB1NOQkR0yLnWmEZQTUW4REqirbskxoYNltZE+8KzXqs9gHG5mrxLR5w3TwUn6AylXkhZZWTPP894xcX/X8Kbg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.13/mode-ocaml.min.js" integrity="sha512-eNLvVhsqupKHLPWDlslUqBr0HTbb8KFm/azDm7ukE2PGSlmfPUsNuOTh8z+u8QjrsDpIQog09ntWF1Mo1a4aHA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.13/theme-ambiance.min.js" integrity="sha512-JSlcMPGsnCu53ixgQjR6qgTQNy/IzjibQob3GSP2JfZtd3naC3H6+NrOs1nDG8rsLulHYCIfBaXaU07G1PbR1g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.1/js/bootstrap.min.js" integrity="sha512-ewfXo9Gq53e1q1+WDTjaHAGZ8UvCWq0eXONhwDuIoaH8xz2r96uoAYaQCm1oQhnBfRXrvJztNXFsTloJfgbL5Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.1/css/bootstrap.min.css" integrity="sha512-6KY5s6UI5J7SVYuZB4S/CZMyPylqyyNZco376NM2Z8Sb8OxEdp02e1jkKk/wZxIEmjQ6DRCEBhni+gpr9c4tvA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<style>
+
+#top-div {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+}
+
+#editor-wrapper {
+    width: 100%;
+    height: 100%;
+    background-color: #3d3d3d;
+}
+
+#editor {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+#canvas-wrapper {
+    width: 50%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    border: none;
+}
+
+#controls {
+    display: flex;
+    width: 75%;
+    flex-direction: column;
+}
+
+#run {
+    margin: 7px;
+    width: 25%;
+}
+
+.ace_gutter-cell {
+    color: #ddd;
+}
+
+html, body {
+    background-color: #3d3d3d;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+#title {
+    font-size: 24px;
+    color: white;
+    font-family: 'sans';
+    font-weight: 500;
+}
+
+#github-link {
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: underline;
+    padding-top: 0.2em;
+    margin-left: auto;
+    color: white;
+}
+
+#title-area {
+    display: flex;
+    padding: 0.25em;
+    margin-left: 0.5em;
+    margin-right: 1.0em;
+    justify-items: center;
+}
+
+#control-area {
+    display: flex;
+    padding: 0.25em;
+    justify-items: center;
+}
+
+select {
+    align-self: center;
+    background-color: #6c757d;
+    line-height: 1.5;
+    text-align: center;
+    vertical-align: middle;
+    border: 1px solid transparent;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    border-radius: 0.25rem;
+    color: white;
+}
+
+select option:disabled {
+    color: #ddd;
+}
+
+#warning {
+    align-self: center;
+    display: flex;
+    color: #ccc;
+    background-color: #2a2a2a;
+    font-family: 'sans';
+    font-size: 0.8rem;
+    width: 20rem;
+    margin: 0;
+    margin-left: 0.5rem;
+    border-radius: 0.35rem;
+    border: 1px solid black;
+    padding: 0.25rem;
+}
+
+#warn-icon {
+    font-size: 2.2rem;
+    align-self: center;
+    line-height: 0.9;
+    margin-right: 0.3rem;
+}
+
+</style>
+  </head>
+  <body>
+    <div id='title-area'>
+        <span id='title'>Graphv Playground</span>
+        <a id='github-link' target="about:blank" href='https://www.github.com/wlitwin/graphv'>Graphv GitHub</a>
+    </div>
+    <div id='control-area'>
+    <button id='run' type='button' class='btn btn-secondary' onclick='runOcaml()'>Run</button>
+    <select id='examples' onchange='loadExample()'>
+        <option value="" disabled selected>Select an example</option>
+        <option value="spinning_hello">Spinning Hello</option>
+        <option value="bouncing_rects">Bouncing Rectangles</option>
+    </select>
+    <div id='warning'><span id='warn-icon'>⚠</span><div>Firefox seems to have long load times ☹, looking into ways of improving that.</div></div>
+    </div>
+    <div id='top-div'>
+        <div id='controls'>
+            <div id='editor-wrapper'>
+                <div id='editor'></div>
+            </div>
+        </div>
+        <iframe sandbox="allow-scripts" id='canvas-wrapper' src='embed.html'></iframe>
+    </div>
+
+    <script defer type='text/javascript'>
+        var editor = ace.edit('editor');
+        editor.setOptions({
+            fontSize: "14pt"
+        });
+        editor.session.setMode('ace/mode/ocaml');
+        editor.setTheme('ace/theme/ambiance');
+
+        function runOcaml() {
+            var text = editor.getSession().getValue();
+            var data = {
+                'code': text
+            };
+            document.getElementById('canvas-wrapper').contentWindow.postMessage(data, '*');
+        }
+
+        function loadExample() {
+            let select = document.getElementById('examples');
+            let script = document.getElementById(select.value);
+            editor.getSession().setValue(script.innerHTML);
+        }
+    </script>
+  </body>
+  <script id='spinning_hello' type='text/ocaml'>open Js_of_ocaml
+open Graphv_webgl
+
+let _ =
+    let canvas = Js.Unsafe.coerce (Dom_html.getElementById_exn "canvas") in
+
+    let vg = create
+        ~flags:CreateFlags.(antialias lor stencil_strokes)
+        webgl_ctx
+    in
+
+    (* File in this case is actually the CSS font name *)
+    Text.create vg ~name:"sans" ~file:"sans" |> ignore;
+
+    webgl_ctx##clearColor 0.3 0.3 0.32 1.;
+
+    let rec render (time : float) =
+        webgl_ctx##clear (
+            webgl_ctx##._COLOR_BUFFER_BIT_
+            lor webgl_ctx##._DEPTH_BUFFER_BIT_
+            lor webgl_ctx##._STENCIL_BUFFER_BIT_
+        );
+
+        let device_ratio = Dom_html.window##.devicePixelRatio in
+        begin_frame vg
+            ~width:(canvas##.width)
+            ~height:(canvas##.height)
+            ~device_ratio
+            ;
+        Transform.scale vg ~x:device_ratio ~y:device_ratio;
+
+        Path.begin_ vg;
+        Path.rect vg ~x:40. ~y:40. ~w:421. ~h:421.;
+        set_fill_color vg ~color:Color.(rgba ~r:154 ~g:203 ~b:255 ~a:200);
+        fill vg;
+
+        Transform.translate vg ~x:250. ~y:250.;
+        Transform.rotate vg ~angle:(time *. 0.0005);
+
+        Text.set_font_face vg ~name:"sans";
+        Text.set_size vg ~size:48.;
+        Text.set_align vg ~align:Align.(center lor middle);
+        set_fill_color vg ~color:Color.white;
+        Text.text vg ~x:0. ~y:0. "Hello World!";
+
+        end_frame vg;
+
+        Dom_html.window##requestAnimationFrame (Js.wrap_callback render)
+        |> ignore;
+    in
+
+    Dom_html.window##requestAnimationFrame (Js.wrap_callback render)
+    |> ignore;
+;;
+</script>
+<script id='bouncing_rects' type='text/ocaml'>open Js_of_ocaml
+module Gv = Graphv_webgl
+
+type rect = {
+    mutable x : float;
+    mutable y : float;
+    mutable w : float;
+    mutable h : float;
+    mutable vx : float;
+    mutable vy : float;
+}
+
+let _ =
+    let canvas = Js.Unsafe.coerce (Dom_html.getElementById_exn "canvas") in
+
+    webgl_ctx##clearColor 0.3 0.3 0.32 1.;
+
+    let vg = Gv.create
+        ~flags:Gv.CreateFlags.(antialias lor stencil_strokes)
+        webgl_ctx
+    in
+
+    Random.self_init();
+
+    let vel = 400. in
+    let vel_2 = ~-.(vel *. 0.5) in
+
+    let rects = Array.init (1000) (fun _ ->
+        {
+            x = Random.float 200. +. 100.;
+            y = Random.float 200. +. 100.;
+            w = 20.;
+            h = 20.;
+            vx = Random.float vel +. vel_2;
+            vy = Random.float vel +. vel_2;
+        }
+    ) in
+
+    let time = ref 0. in
+    let frames = ref 0 in
+    let last_count = ref !time in
+    let last_fps = ref "0" in
+
+    Gv.Text.create vg ~name:"sans" ~file:"arial" |> ignore;
+
+    let rec render (now : float) =
+        let device_ratio = Dom_html.window##.devicePixelRatio in
+        webgl_ctx##clear (
+            webgl_ctx##._COLOR_BUFFER_BIT_
+            lor webgl_ctx##._DEPTH_BUFFER_BIT_
+            lor webgl_ctx##._STENCIL_BUFFER_BIT_
+        );
+
+        let now = now /. 1000. in
+        let dt = now -. !time in
+        time := now;
+
+        if now -. !last_count >= 1. then (
+            last_count := now;
+            last_fps := Printf.sprintf "%d" !frames;
+            frames := 0;
+        );
+
+        incr frames;
+
+        Gv.begin_frame vg
+            ~width:(canvas##.width)
+            ~height:(canvas##.height)
+            ~device_ratio
+            ;
+
+        let open Gv in
+
+        let win_w = float canvas##.width in
+        let win_h = float canvas##.height in
+
+        let len = Array.length rects in
+        for i=0 to len-1 do
+            let r = rects.(i) in
+            r.x <- r.x +. r.vx*.dt;
+            r.y <- r.y +. r.vy*.dt;
+
+            if r.x +. r.w > win_w then (
+                r.x <- win_w -. r.w;
+                r.vx <- ~-.(r.vx);
+            );
+
+            if r.y +. r.h > win_h then (
+                r.y <- win_h -. r.h;
+                r.vy <- ~-.(r.vy);
+            );
+
+            if r.x < 0. then (
+                r.x <- 0.;
+                r.vx <- ~-.(r.vx) +. Random.float 200. -. 100.;
+            );
+
+            if r.y < 0. then (
+                r.y <- 0.;
+                r.vy <- ~-.(r.vy) +. Random.float 200. -. 100.;
+            );
+
+            let r1 = Float.abs r.vx /. 400. *. 255. |> int_of_float in
+            let g1 = Float.abs r.vy /. 400. *. 255. |> int_of_float in
+
+            set_fill_color vg
+                ~color:Gv.Color.(rgba ~r:r1 ~g:g1 ~b:255 ~a:255);
+                
+            Gv.Path.begin_ vg;
+            Gv.Path.rect vg ~x:r.x ~y:r.y ~w:r.w ~h:r.h;
+            Gv.fill vg;
+        done;
+
+        Text.set_size vg ~size:40.;
+        Text.set_align vg ~align:Gv.Align.(left lor top);
+        set_fill_color vg ~color:Color.black;
+        Text.text vg ~x:2. ~y:2. !last_fps;
+        set_fill_color vg ~color:Color.white;
+        Text.text vg ~x:0. ~y:0. !last_fps;
+
+        Gv.end_frame vg;
+
+        Dom_html.window##requestAnimationFrame (Js.wrap_callback render)
+        |> ignore;
+    in
+
+    Dom_html.window##requestAnimationFrame (Js.wrap_callback render)
+    |> ignore;
+;;
+</script>
+</html>

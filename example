@@ -1,0 +1,55 @@
+let _ =
+    let module NVG = Graphv_webgl in
+    let open Js_of_ocaml in
+    let canvas = Js.Unsafe.coerce (Dom_html.getElementById_exn "canvas") in
+
+    let open NVG in
+
+    let vg = create 
+        ~flags:CreateFlags.(antialias lor stencil_strokes) 
+        webgl_ctx 
+    in 
+
+    (* File in this case is actually the CSS font name *)
+    Text.create vg ~name:"sans" ~file:"sans" |> ignore;
+
+    webgl_ctx##clearColor 0.3 0.3 0.32 1.;
+
+    let rec render (time : float) =
+        webgl_ctx##clear (
+            webgl_ctx##._COLOR_BUFFER_BIT_ 
+            lor webgl_ctx##._DEPTH_BUFFER_BIT_ 
+            lor webgl_ctx##._STENCIL_BUFFER_BIT_
+        );
+
+        let device_ratio = Dom_html.window##.devicePixelRatio in
+        begin_frame vg 
+            ~width:(canvas##.width) 
+            ~height:(canvas##.height) 
+            ~device_ratio
+            ;
+        Transform.scale vg ~x:device_ratio ~y:device_ratio;
+
+        Path.begin_ vg;
+        Path.rect vg ~x:40. ~y:40. ~w:320. ~h:320.;
+        set_fill_color vg ~color:Color.(rgba ~r:154 ~g:203 ~b:255 ~a:200);
+        fill vg;
+
+        Transform.translate vg ~x:200. ~y:200.;
+        Transform.rotate vg ~angle:(time *. 0.0005);
+
+        Text.set_font_face vg ~name:"sans";
+        Text.set_size vg ~size:48.;
+        Text.set_align vg ~align:Align.(center lor middle);
+        set_fill_color vg ~color:Color.white;
+        Text.text vg ~x:0. ~y:0. "Hello World!";
+
+        NVG.end_frame vg;
+
+        Dom_html.window##requestAnimationFrame (Js.wrap_callback render) 
+        |> ignore;
+    in
+
+    Dom_html.window##requestAnimationFrame (Js.wrap_callback render) 
+    |> ignore;
+;;
