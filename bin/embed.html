@@ -191,6 +191,7 @@ details[open] summary:after {
 
             stdout_wrapper.open = stdout.innerText.length > 0;
             stderr_wrapper.open = stderr.innerText.length > 0;
+            parent.postMessage('done', "*");
         });
     </script>
     <script defer type="text/javascript" src="eval.js"></script>

@@ -10,6 +10,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.13/theme-ambiance.min.js" integrity="sha512-JSlcMPGsnCu53ixgQjR6qgTQNy/IzjibQob3GSP2JfZtd3naC3H6+NrOs1nDG8rsLulHYCIfBaXaU07G1PbR1g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.1/js/bootstrap.min.js" integrity="sha512-ewfXo9Gq53e1q1+WDTjaHAGZ8UvCWq0eXONhwDuIoaH8xz2r96uoAYaQCm1oQhnBfRXrvJztNXFsTloJfgbL5Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.1/css/bootstrap.min.css" integrity="sha512-6KY5s6UI5J7SVYuZB4S/CZMyPylqyyNZco376NM2Z8Sb8OxEdp02e1jkKk/wZxIEmjQ6DRCEBhni+gpr9c4tvA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.13/keybinding-vim.min.js" integrity="sha512-xp5tDiJMTiTOG6fjhMjNGaV3zw+kyaHq53hWvc5XrMvj/Pe/EOaby08LVHJp50xCE4VFF9rnJpRP4+JJyelGvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.13/keybinding-emacs.min.js" integrity="sha512-1Z4E+xA+twF7jPCjJSFpeywof+mG40O66/pLMnAElym2Bu34nUTtTRQZG/eDkGIrp+bORyr2Ej2BWd6/sJBMWA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
 
 #top-div {
@@ -140,6 +142,15 @@ select option:disabled {
     margin-right: 0.3rem;
 }
 
+#compile-time-text {
+    color: #ddd;
+    align-self: end;
+    margin-left: auto;
+    margin-top: auto;
+    font-size: 1.15rem;
+    margin-right: 1rem;
+}
+
 </style>
   </head>
   <body>
@@ -156,6 +167,7 @@ select option:disabled {
         <option value="bouncing_rects">Bouncing Rectangles</option>
     </select>
     <div id='warning'><span id='warn-icon'>⚠</span><div>Firefox seems to have long load times ☹, looking into ways of improving that.</div></div>
+    <div id='compile-time-text'></div>
     </div>
     <div id='top-div'>
         <div id='controls'>
@@ -174,13 +186,26 @@ select option:disabled {
         editor.session.setMode('ace/mode/ocaml');
         editor.setTheme('ace/theme/ambiance');
 
+        var compileTimeStart = 0;
+        var compileTimeElement = document.getElementById('compile-time-text');
+        var runButton = document.getElementById('run');
+
         function runOcaml() {
+            runButton.disabled = true;
             var text = editor.getSession().getValue();
             var data = {
                 'code': text
             };
+
+            compileTimeStart = performance.now();
             document.getElementById('canvas-wrapper').contentWindow.postMessage(data, '*');
         }
+
+        window.addEventListener('message', function(msg) {
+            let totalTime = performance.now() - compileTimeStart;
+            compileTimeElement.innerText = "Compile Time: " + (totalTime/1000).toFixed(2) + "s";
+            runButton.disabled = false;
+        });
 
         function loadExample() {
             let select = document.getElementById('examples');
@@ -347,7 +372,7 @@ let _ =
 
             set_fill_color vg
                 ~color:Gv.Color.(rgba ~r:r1 ~g:g1 ~b:255 ~a:255);
-                
+
             Gv.Path.begin_ vg;
             Gv.Path.rect vg ~x:r.x ~y:r.y ~w:r.w ~h:r.h;
             Gv.fill vg;
