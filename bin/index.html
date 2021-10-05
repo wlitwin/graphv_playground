@@ -53,6 +53,10 @@
     color: #ddd;
 }
 
+.ace_comment {
+    color: #e9db7b !important;
+}
+
 html, body {
     font-family: sans-serif;
     background-color: #3d3d3d;
@@ -147,6 +151,7 @@ select option:disabled {
     <button id='run' type='button' class='btn btn-secondary' onclick='runOcaml()'>Run</button>
     <select id='examples' onchange='loadExample()'>
         <option value="" disabled selected>Select an example</option>
+        <option value="scaffold">Basic Scaffold</option>
         <option value="spinning_hello">Spinning Hello</option>
         <option value="bouncing_rects">Bouncing Rectangles</option>
     </select>
@@ -188,8 +193,6 @@ select option:disabled {
 open Graphv_webgl
 
 let _ =
-    let canvas = Js.Unsafe.coerce (Dom_html.getElementById_exn "canvas") in
-
     let vg = create
         ~flags:CreateFlags.(antialias lor stencil_strokes)
         webgl_ctx
@@ -209,8 +212,8 @@ let _ =
 
         let device_ratio = Dom_html.window##.devicePixelRatio in
         begin_frame vg
-            ~width:(canvas##.width)
-            ~height:(canvas##.height)
+            ~width:(float canvas##.width)
+            ~height:(float canvas##.height)
             ~device_ratio
             ;
         Transform.scale vg ~x:device_ratio ~y:device_ratio;
@@ -252,8 +255,6 @@ type rect = {
 }
 
 let _ =
-    let canvas = Js.Unsafe.coerce (Dom_html.getElementById_exn "canvas") in
-
     webgl_ctx##clearColor 0.3 0.3 0.32 1.;
 
     let vg = Gv.create
@@ -304,16 +305,16 @@ let _ =
 
         incr frames;
 
+        let win_w = float canvas##.width in
+        let win_h = float canvas##.height in
+
         Gv.begin_frame vg
-            ~width:(canvas##.width)
-            ~height:(canvas##.height)
+            ~width:win_w
+            ~height:win_h
             ~device_ratio
             ;
 
         let open Gv in
-
-        let win_w = float canvas##.width in
-        let win_h = float canvas##.height in
 
         let len = Array.length rects in
         for i=0 to len-1 do
@@ -358,6 +359,79 @@ let _ =
         Text.text vg ~x:2. ~y:2. !last_fps;
         set_fill_color vg ~color:Color.white;
         Text.text vg ~x:0. ~y:0. !last_fps;
+
+        Gv.end_frame vg;
+
+        Dom_html.window##requestAnimationFrame (Js.wrap_callback render)
+        |> ignore;
+    in
+
+    Dom_html.window##requestAnimationFrame (Js.wrap_callback render)
+    |> ignore;
+;;
+</script>
+<script id='scaffold' type='text/ocaml'>open Js_of_ocaml
+module Gv = Graphv_webgl
+
+module FPS = struct
+    type t = {
+        mutable last : float;
+        mutable last_fps : float;
+        mutable fps : string;
+        mutable fps_count : int; }
+    let create () = { last = 0.; last_fps = 0.; fps = "0"; fps_count = 0; }
+    let update t now =
+        let now = now /. 1000. in
+        let dt = now -. t.last in
+        if now -. t.last_fps >= 1. then (
+            t.fps <- Printf.sprintf "%d" t.fps_count;
+            t.fps_count <- 0;
+            t.last_fps <- now;
+        );
+        t.fps_count <- t.fps_count + 1;
+        dt
+    let draw t vg =
+        let open Gv in
+        Text.set_size vg ~size:40.;
+        Text.set_align vg ~align:Gv.Align.(left lor top);
+        set_fill_color vg ~color:Color.black;
+        Text.text vg ~x:2. ~y:2. t.fps;
+        set_fill_color vg ~color:Color.white;
+        Text.text vg ~x:0. ~y:0. t.fps;
+end
+
+let _ =
+    webgl_ctx##clearColor 0.3 0.3 0.32 1.;
+
+    let vg = Gv.create
+        ~flags:Gv.CreateFlags.(antialias lor stencil_strokes)
+        webgl_ctx
+    in
+
+    Gv.Text.create vg ~name:"sans" ~file:"arial" |> ignore;
+
+    let fps = FPS.create() in
+
+    let rec render (now : float) =
+        let device_ratio = Dom_html.window##.devicePixelRatio in
+        webgl_ctx##clear (
+            webgl_ctx##._COLOR_BUFFER_BIT_
+            lor webgl_ctx##._DEPTH_BUFFER_BIT_
+            lor webgl_ctx##._STENCIL_BUFFER_BIT_
+        );
+
+        (* Time since last frame in seconds *)
+        let _dt = FPS.update fps now in
+
+        Gv.begin_frame vg
+            ~width:(float canvas##.width)
+            ~height:(float canvas##.height)
+            ~device_ratio
+            ;
+
+        (* Add code here *)
+
+        FPS.draw fps vg;
 
         Gv.end_frame vg;
 

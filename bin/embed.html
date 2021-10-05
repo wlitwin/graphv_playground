@@ -54,7 +54,7 @@ details>summary {
 pre {
     display: inline-block;
     font-size: 1rem;
-    font-family: "mono";
+    font-family: monospace;
     background-color: #2d2d2d;
     padding: 0.25rem;
     margin: 0;
@@ -144,6 +144,9 @@ details[open] summary:after {
             <div>
                 <h4 style='margin-top: 1rem;'>About</h4>
                 <p>Paste code into the left editor or select an example from the drop down, then click the run button. Once compiled the render will show on the right-side canvas. Any errors will be shown in the "Standard Error" details pane, which automatically expands on errors. The following variables come predefined when the code is loaded:
+                </p>
+                <p>
+                <pre>canvas</pre> - An object of type <pre>Dom_html.canvasElement Js.t</pre>. It is a reference to the drawing canvas DOM element.
                 </p>
                 <p>
                 <pre>webgl_ctx</pre> - An object of type <pre>WebGL.renderingContext Js.t</pre>. It is the WebGL context for the canvas on the right.
