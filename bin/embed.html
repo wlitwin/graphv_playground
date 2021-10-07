@@ -142,14 +142,14 @@ details[open] summary:after {
         </div>
         <div id='about'>
             <div>
-                <h4 style='margin-top: 1rem;'>About</h4>
+                <h2 style='margin-top: 1rem; margin-bottom:0; font-size:1.4rem'>About</h2>
                 <p>Paste code into the left editor or select an example from the drop down, then click the run button. Once compiled the render will show on the right-side canvas. Any errors will be shown in the "Standard Error" details pane, which automatically expands on errors. The following variables come predefined when the code is loaded:
                 </p>
                 <p>
-                <pre>canvas</pre> - An object of type <pre>Dom_html.canvasElement Js.t</pre>. It is a reference to the drawing canvas DOM element.
+                <pre>canvas : Dom_html.canvasElement Js.t</pre> A reference to the drawing canvas DOM element.
                 </p>
                 <p>
-                <pre>webgl_ctx</pre> - An object of type <pre>WebGL.renderingContext Js.t</pre>. It is the WebGL context for the canvas on the right.
+                <pre>create_webgl_ctx : 'a Js.t -> WebGL.renderingContext Js.t</pre> A helper function that creates a WebGL context from the canvas using the passed in parameters, use the <pre>object%js end</pre> syntax to create the object. See samples for an example.
                 </p>
             </div>
         </div>
@@ -157,7 +157,6 @@ details[open] summary:after {
     <script defer type='text/javascript'>
         var stdout = document.getElementById('stdout');
         var stderr = document.getElementById('stderr');
-        var canvas = document.getElementById('canvas');
 
         var stdout_wrapper = document.getElementById('stdout-wrapper');
         var stderr_wrapper = document.getElementById('stderr-wrapper');
@@ -174,7 +173,9 @@ details[open] summary:after {
 
         resizeCanvas(canvas);
 
-        var webgl_ctx = canvas.getContext('webgl', {stencil: true});
+        function createWebGLContext(options) {
+            return canvas.getContext('webgl', options);
+        }
 
         function cancelAllAnimationFrames(){
             var id = window.requestAnimationFrame(function(){});
@@ -183,14 +184,34 @@ details[open] summary:after {
             }
         }
 
-        window.addEventListener('message', function(msg) {
-            stdout.innerText = '';
-            stderr.innerText = '';
-            cancelAllAnimationFrames();
-            evaluator.execute(msg.data.code);
+        function cancelAllTimers(){
+            var id = window.setTimeout(function() {}, 0);
+            while (id--) {
+                window.clearTimeout(id);
+            }
+        }
 
-            stdout_wrapper.open = stdout.innerText.length > 0;
-            stderr_wrapper.open = stderr.innerText.length > 0;
+        function createFreshCanvas(){
+            const old_canvas = document.querySelector('#canvas');
+            const new_canvas = document.createElement('canvas');
+            new_canvas.id = 'canvas';
+            old_canvas.parentNode.replaceChild(new_canvas, old_canvas);
+            resizeCanvas(new_canvas);
+        }
+
+        window.addEventListener('message', function(msg) {
+            try {
+                createFreshCanvas();
+                stdout.innerText = '';
+                stderr.innerText = '';
+                cancelAllAnimationFrames();
+                cancelAllTimers();
+                evaluator.execute(msg.data.code);
+                stdout_wrapper.open = stdout.innerText.length > 0;
+                stderr_wrapper.open = stderr.innerText.length > 0;
+            } catch(err) {
+                console.log(err);
+            }
             parent.postMessage('done', "*");
         });
     </script>

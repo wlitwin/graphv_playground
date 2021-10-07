@@ -175,6 +175,7 @@ select option:disabled {
         <option value="scaffold">Basic Scaffold</option>
         <option value="spinning_hello">Spinning Hello</option>
         <option value="bouncing_rects">Bouncing Rectangles</option>
+        <option value='preserve_drawing'>Preserve Drawing</option>
     </select>
     <div id='warning'><span id='warn-icon'>⚠</span><div>Firefox seems to have long load times ☹, looking into ways of improving that.</div></div>
     <div id='compile-time-text'></div>
@@ -190,11 +191,16 @@ select option:disabled {
 
     <script defer type='text/javascript'>
         var editor = ace.edit('editor');
+        var modified_code = false;
         editor.setOptions({
-            fontSize: "14px"
+            fontSize: "14px",
+            showPrintMargin: false,
         });
         editor.session.setMode('ace/mode/ocaml');
         editor.setTheme('ace/theme/ambiance');
+        editor.getSession().on('change', function() {
+            modified_code = true;
+        });
 
         var compileTimeStart = 0;
         var compileTimeElement = document.getElementById('compile-time-text');
@@ -221,11 +227,23 @@ select option:disabled {
             let select = document.getElementById('examples');
             let script = document.getElementById(select.value);
             editor.getSession().setValue(script.innerHTML);
+            modified_code = false;
+        }
+
+        window.onbeforeunload = function(event) {
+            if (modified_code) {
+                event.returnValue = null;
+                return '';
+            }
         }
     </script>
   </body>
   <script id='spinning_hello' type='text/ocaml'>open Js_of_ocaml
 open Graphv_webgl
+
+let webgl_ctx = create_webgl_ctx (object%js
+    val stencil = true
+end)
 
 let _ =
     let vg = create
@@ -289,6 +307,12 @@ type rect = {
     mutable vy : float;
 }
 
+let webgl_ctx = create_webgl_ctx (object%js
+    val stencil = true
+    (* try uncommenting this *)
+    (* val preserveDrawingBuffer = true *)
+end)
+
 let _ =
     webgl_ctx##clearColor 0.3 0.3 0.32 1.;
 
@@ -322,10 +346,19 @@ let _ =
 
     let rec render (now : float) =
         let device_ratio = Dom_html.window##.devicePixelRatio in
-        webgl_ctx##clear (
-            webgl_ctx##._COLOR_BUFFER_BIT_
-            lor webgl_ctx##._DEPTH_BUFFER_BIT_
-            lor webgl_ctx##._STENCIL_BUFFER_BIT_
+
+        let attrs = webgl_ctx##getContextAttributes in
+        if attrs##.preserveDrawingBuffer |> Js.to_bool then (
+            webgl_ctx##clear (
+                webgl_ctx##._DEPTH_BUFFER_BIT_
+                lor webgl_ctx##._STENCIL_BUFFER_BIT_
+            );
+        ) else (
+            webgl_ctx##clear (
+                webgl_ctx##._COLOR_BUFFER_BIT_
+                lor webgl_ctx##._DEPTH_BUFFER_BIT_
+                lor webgl_ctx##._STENCIL_BUFFER_BIT_
+            );
         );
 
         let now = now /. 1000. in
@@ -401,10 +434,8 @@ let _ =
         |> ignore;
     in
 
-    Dom_html.window##requestAnimationFrame (Js.wrap_callback render)
-    |> ignore;
-;;
-</script>
+    render 0.
+;;</script>
 <script id='scaffold' type='text/ocaml'>open Js_of_ocaml
 module Gv = Graphv_webgl
 
@@ -434,6 +465,10 @@ module FPS = struct
         set_fill_color vg ~color:Color.white;
         Text.text vg ~x:0. ~y:0. t.fps;
 end
+
+let webgl_ctx = create_webgl_ctx (object%js
+    val stencil = true
+end)
 
 let _ =
     webgl_ctx##clearColor 0.3 0.3 0.32 1.;
@@ -474,8 +509,271 @@ let _ =
         |> ignore;
     in
 
-    Dom_html.window##requestAnimationFrame (Js.wrap_callback render)
-    |> ignore;
+    render 0.
+;;</script>
+<script id='preserve_drawing' type='text/ocaml'>open Js_of_ocaml
+module Gv = Graphv_webgl
+
+let webgl_ctx = create_webgl_ctx (object%js
+    val stencil = true
+    val preserveDrawingBuffer = true
+end)
+
+type side =
+    | Top
+    | Bottom
+    | Left
+    | Right
+
+type state =
+    | Drawing of {
+        mutable x : float;
+        mutable y : float;
+        mutable dx : bool;
+        mutable dy : bool;
+        mutable change : float;
+        time : float;
+    }
+    | Clear of {
+        mutable line : float;
+    }
+    | Border of {
+        side : side;
+        mutable value : float;
+    }
 ;;
-</script>
+
+let performance_now () : float =
+    Js.Unsafe.(meth_call (variable "performance")) "now" [||]
+;;
+
+let _ =
+    webgl_ctx##clearColor 0.3 0.3 0.32 1.;
+
+    let vg = Gv.create
+        ~flags:Gv.CreateFlags.(antialias lor stencil_strokes)
+        webgl_ctx
+    in
+
+    Random.self_init();
+
+    let win_w = float canvas##.width in
+    let win_h = float canvas##.height in
+
+    let state = ref (Clear {line = win_h}) in
+
+    webgl_ctx##clear (
+        webgl_ctx##._COLOR_BUFFER_BIT_
+    );
+
+    let last = ref (performance_now()) in
+    let rec render (now : float) =
+        let device_ratio = Dom_html.window##.devicePixelRatio in
+        webgl_ctx##clear (
+            webgl_ctx##._DEPTH_BUFFER_BIT_
+            lor webgl_ctx##._STENCIL_BUFFER_BIT_
+        );
+
+        let open Gv in
+
+        webgl_ctx##enable webgl_ctx##._BLEND;
+        webgl_ctx##blendFunc webgl_ctx##._ONE webgl_ctx##._ONE_MINUS_SRC_ALPHA_;
+
+        let dt = (now -. !last) /. 1000. in
+        last := now;
+
+        Gv.begin_frame vg
+            ~width:win_w
+            ~height:win_h
+            ~device_ratio
+            ;
+
+        let sz = 20. in
+        let sz_i = int_of_float sz in
+
+        let mx = Int.rem (int_of_float win_w) sz_i |> float in
+        let my = Int.rem (int_of_float win_h) sz_i |> float in
+
+        set_stroke_width vg ~width:2.;
+
+        begin match !state with
+        | Drawing box ->
+            let r =
+                let v = Random.int 100 in
+                if v = 99 then (
+                    sz*.0.5*.(Random.float 2. +. 2.)
+                ) else if v > 30 then (
+                    sz*.0.5
+                ) else (
+                    sz*.0.5*.(Random.float 1. +. 0.4)
+                )
+            in
+
+            let cx = (box.x+.sz*.0.5) in
+            let cy = (box.y+.sz*.0.5) in
+
+            Path.begin_ vg;
+            if Random.int 100 > 10 then (
+                Path.circle vg ~cx ~cy ~r;
+            ) else (
+                Path.rect vg ~x:box.x ~y:box.y ~w:sz ~h:sz;
+            );
+            set_fill_color vg ~color:(Color.rgba ~r:255 ~g:255 ~b:255 ~a:64);
+            fill vg;
+            stroke vg;
+
+            if box.change <= now then (
+                if Random.bool() then (
+                    box.dx <- not box.dx;
+                ) else (
+                    box.dy <- not box.dy;
+                );
+                box.change <- now +. Random.float 500. +. 250.;
+            );
+
+            box.x <- box.x +. (if box.dx then 1. else ~-.1.)*.sz;
+            box.y <- box.y +. (if box.dy then 1. else ~-.1.)*.sz;
+
+            if box.x < 0. then (
+                box.x <- box.x +. sz;
+                box.dx <- not box.dx;
+            );
+
+            if box.y < 0. then (
+                box.y <- box.y +. sz;
+                box.dy <- not box.dy;
+            );
+
+            if box.x +. sz >= win_w then (
+                box.x <- box.x -. sz;
+                box.dx <- not box.dx;
+            );
+
+             if box.y +. sz >= win_h then (
+                box.y <- box.y -. sz;
+                box.dy <- not box.dy;
+            );
+
+            if box.time <= now then (
+                state := Clear {
+                   line = win_h;
+                };
+            );
+
+        | Clear clear ->
+            clear.line <- clear.line -. (win_h)*.dt;
+
+            Path.begin_ vg;
+            Path.rect vg
+                ~x:0.
+                ~y:clear.line
+                ~w:win_w
+                ~h:(win_h -. clear.line);
+            set_fill_color vg ~color:(Color.rgba ~r:255 ~g:128 ~b:64 ~a:255);
+            fill vg;
+
+            if clear.line <= 0. then (
+                state := Border {
+                    side = Top;
+                    value = 0.;
+                }
+            )
+
+        | Border ({side=Top; _} as border) ->
+            border.value <- border.value +. (win_w*.4.)*.dt;
+            Path.begin_ vg;
+            Path.rect vg
+                ~x:0.
+                ~y:0.
+                ~w:border.value
+                ~h:(my*.0.5);
+            set_fill_color vg ~color:Color.white;
+            fill vg;
+
+            if border.value >= win_w then (
+                state := Border {
+                    side = Right;
+                    value = 0.;
+                }
+            )
+
+        | Border ({side=Right; _} as border) ->
+            border.value <- border.value +. (win_h*.4.)*.dt;
+            Path.begin_ vg;
+            Path.rect vg
+                ~x:(win_w -. mx*.0.5)
+                ~y:0.
+                ~w:(mx*.0.5)
+                ~h:border.value;
+            set_fill_color vg ~color:Color.white;
+            fill vg;
+
+            if border.value >= win_h then (
+                state := Border {
+                    side = Bottom;
+                    value = win_w;
+                }
+            )
+
+        | Border ({side=Bottom; _} as border) ->
+            border.value <- border.value -. (win_w*.4.)*.dt;
+            Path.begin_ vg;
+            Path.rect vg
+                ~x:border.value
+                ~y:(win_h -. my*.0.5)
+                ~w:(win_w -. border.value)
+                ~h:(my*.0.5);
+            set_fill_color vg ~color:Color.white;
+            fill vg;
+
+            if border.value <= 0. then (
+                state := Border {
+                    side = Left;
+                    value = win_h;
+                }
+            )
+
+        | Border ({side=Left; _} as border) ->
+            border.value <- border.value -. (win_h*.4.)*.dt;
+            Path.begin_ vg;
+            Path.rect vg
+                ~x:0.
+                ~y:border.value
+                ~w:(mx*.0.5)
+                ~h:(win_h -. border.value);
+            set_fill_color vg ~color:Color.white;
+            fill vg;
+
+            if border.value <= 0. then (
+                let x = Random.float (win_w *. 0.8) +. (win_w*.0.1) in
+                let x =
+                    let x = int_of_float x in
+                    (x / sz_i * sz_i |> float) +. mx *. 0.5
+                in
+
+                let y = Random.float (win_h *. 0.8) +. (win_h*.0.1) in
+                let y =
+                    let y = int_of_float y in
+                    (y / sz_i * sz_i |> float) +. my *. 0.5
+                in
+
+                state := Drawing {
+                    x;
+                    y;
+                    dx = Random.bool();
+                    dy = Random.bool();
+                    change = Random.float 1000. +. 500.;
+                    time = now +. 20000.;
+                }
+            )
+        end;
+
+        Gv.end_frame vg;
+
+        Dom_html.window##requestAnimationFrame (Js.wrap_callback render)
+        |> ignore;
+    in
+
+    render 0.
+;;</script>
 </html>

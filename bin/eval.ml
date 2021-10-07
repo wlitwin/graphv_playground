@@ -40,7 +40,15 @@ let setup_toplevel() =
     Sys_js.set_channel_flusher stdout (append_string dom "stdout");
     let dom = Dom_html.getElementById "stderr" in
     Sys_js.set_channel_flusher stderr (append_string dom "stderr");
-    JsooTop.execute false formatter "let webgl_ctx : Js_of_ocaml.WebGL.renderingContext Js_of_ocaml.Js.t = Js_of_ocaml.Js.Unsafe.variable \"webgl_ctx\";;\nlet canvas : Js_of_ocaml.Dom_html.canvasElement Js_of_ocaml.Js.t = Js_of_ocaml.Js.Unsafe.coerce (Js_of_ocaml.Dom_html.getElementById_exn \"canvas\");;";
+    JsooTop.execute false formatter
+{|let create_webgl_ctx (params : 'a Js_of_ocaml.Js.t) : Js_of_ocaml.WebGL.renderingContext Js_of_ocaml.Js.t =
+    Js_of_ocaml.Js.Unsafe.fun_call (Js_of_ocaml.Js.Unsafe.variable "createWebGLContext") [|Js_of_ocaml.Js.Unsafe.inject params|]
+;;
+
+let canvas : Js_of_ocaml.Dom_html.canvasElement Js_of_ocaml.Js.t =
+    Js_of_ocaml.Js.Unsafe.coerce (Js_of_ocaml.Dom_html.getElementById_exn "canvas")
+;;
+|}
 ;;
 
 let execute code =
