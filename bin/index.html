@@ -174,6 +174,7 @@ select option:disabled {
         <option value="" disabled selected>Select an example</option>
         <option value="scaffold">Basic Scaffold</option>
         <option value="spinning_hello">Spinning Hello</option>
+        <option value="render_texture">Render Texture</option>
         <option value="bouncing_rects">Bouncing Rectangles</option>
         <option value='preserve_drawing'>Preserve Drawing</option>
     </select>
@@ -674,8 +675,8 @@ let _ =
 
             if clear.line <= 0. then (
                 state := Border {
-                    side = Top;
-                    value = 0.;
+                    side = Bottom;
+                    value = win_w;
                 }
             )
 
@@ -709,9 +710,25 @@ let _ =
             fill vg;
 
             if border.value >= win_h then (
-                state := Border {
-                    side = Bottom;
-                    value = win_w;
+                let x = Random.float (win_w *. 0.8) +. (win_w*.0.1) in
+                let x =
+                    let x = int_of_float x in
+                    (x / sz_i * sz_i |> float) +. mx *. 0.5
+                in
+
+                let y = Random.float (win_h *. 0.8) +. (win_h*.0.1) in
+                let y =
+                    let y = int_of_float y in
+                    (y / sz_i * sz_i |> float) +. my *. 0.5
+                in
+
+                state := Drawing {
+                    x;
+                    y;
+                    dx = Random.bool();
+                    dy = Random.bool();
+                    change = Random.float 1000. +. 500.;
+                    time = now +. 20000.;
                 }
             )
 
@@ -745,30 +762,378 @@ let _ =
             fill vg;
 
             if border.value <= 0. then (
-                let x = Random.float (win_w *. 0.8) +. (win_w*.0.1) in
-                let x =
-                    let x = int_of_float x in
-                    (x / sz_i * sz_i |> float) +. mx *. 0.5
-                in
-
-                let y = Random.float (win_h *. 0.8) +. (win_h*.0.1) in
-                let y =
-                    let y = int_of_float y in
-                    (y / sz_i * sz_i |> float) +. my *. 0.5
-                in
-
-                state := Drawing {
-                    x;
-                    y;
-                    dx = Random.bool();
-                    dy = Random.bool();
-                    change = Random.float 1000. +. 500.;
-                    time = now +. 20000.;
+                state := Border {
+                    side = Top;
+                    value = 0.;
                 }
+                
             )
         end;
 
         Gv.end_frame vg;
+
+        Dom_html.window##requestAnimationFrame (Js.wrap_callback render)
+        |> ignore;
+    in
+
+    render 0.
+;;</script>
+<script id='render_texture' type='text/ocaml'>open Js_of_ocaml
+open Graphv_webgl
+
+(*******************************************************************************
+
+    WARNING - This program may take a bit longer to compile, it's pretty big!
+
+********************************************************************************)
+
+let gl = create_webgl_ctx (object%js
+    val stencil = true
+end)
+;;
+
+let texture =
+    let tex = gl##createTexture in
+    gl##bindTexture gl##._TEXTURE_2D_ tex;
+    gl##texImage2D_new gl##._TEXTURE_2D_ 0
+        gl##._RGBA 256 256
+        0 gl##._RGBA gl##._UNSIGNED_BYTE_
+        Js.null
+    ;
+    gl##texParameteri gl##._TEXTURE_2D_ gl##._TEXTURE_MIN_FILTER_ gl##._LINEAR;
+    gl##texParameteri gl##._TEXTURE_2D_ gl##._TEXTURE_WRAP_S_ gl##._CLAMP_TO_EDGE_;
+    gl##texParameteri gl##._TEXTURE_2D_ gl##._TEXTURE_WRAP_T_ gl##._CLAMP_TO_EDGE_;
+    tex
+;;
+
+let fb =
+    let fb = gl##createFramebuffer in
+    gl##bindFramebuffer gl##._FRAMEBUFFER fb;
+    gl##framebufferTexture2D gl##._FRAMEBUFFER
+        gl##._COLOR_ATTACHMENT0_
+        gl##._TEXTURE_2D_
+        texture 0;
+    fb
+;;
+
+let cubePosBuf =
+    let data =
+    new%js Typed_array.float32Array_fromArray (Js.array [|
+        -0.5; -0.5;  -0.5;
+        -0.5;  0.5;  -0.5;
+         0.5; -0.5;  -0.5;
+        -0.5;  0.5;  -0.5;
+         0.5;  0.5;  -0.5;
+         0.5; -0.5;  -0.5;
+
+        -0.5; -0.5;   0.5;
+         0.5; -0.5;   0.5;
+        -0.5;  0.5;   0.5;
+        -0.5;  0.5;   0.5;
+         0.5; -0.5;   0.5;
+         0.5;  0.5;   0.5;
+
+        -0.5;   0.5; -0.5;
+        -0.5;   0.5;  0.5;
+         0.5;   0.5; -0.5;
+        -0.5;   0.5;  0.5;
+         0.5;   0.5;  0.5;
+         0.5;   0.5; -0.5;
+
+        -0.5;  -0.5; -0.5;
+         0.5;  -0.5; -0.5;
+        -0.5;  -0.5;  0.5;
+        -0.5;  -0.5;  0.5;
+         0.5;  -0.5; -0.5;
+         0.5;  -0.5;  0.5;
+
+        -0.5;  -0.5; -0.5;
+        -0.5;  -0.5;  0.5;
+        -0.5;   0.5; -0.5;
+        -0.5;  -0.5;  0.5;
+        -0.5;   0.5;  0.5;
+        -0.5;   0.5; -0.5;
+
+         0.5;  -0.5; -0.5;
+         0.5;   0.5; -0.5;
+         0.5;  -0.5;  0.5;
+         0.5;  -0.5;  0.5;
+         0.5;   0.5; -0.5;
+         0.5;   0.5;  0.5;
+    |]) in
+    let buf = gl##createBuffer in
+    gl##bindBuffer gl##._ARRAY_BUFFER_ buf;
+    gl##bufferData gl##._ARRAY_BUFFER_ data gl##._STATIC_DRAW_;
+    buf
+;;
+
+let cubeTexBuf =
+    let data =
+    new%js Typed_array.float32Array_fromArray (Js.array [|
+        0.; 0.;
+        0.; 1.;
+        1.; 0.;
+        0.; 1.;
+        1.; 1.;
+        1.; 0.;
+
+        0.; 0.;
+        0.; 1.;
+        1.; 0.;
+        1.; 0.;
+        0.; 1.;
+        1.; 1.;
+
+        0.; 0.;
+        0.; 1.;
+        1.; 0.;
+        0.; 1.;
+        1.; 1.;
+        1.; 0.;
+
+        0.; 0.;
+        0.; 1.;
+        1.; 0.;
+        1.; 0.;
+        0.; 1.;
+        1.; 1.;
+
+        0.; 0.;
+        0.; 1.;
+        1.; 0.;
+        0.; 1.;
+        1.; 1.;
+        1.; 0.;
+
+        0.; 0.;
+        0.; 1.;
+        1.; 0.;
+        1.; 0.;
+        0.; 1.;
+        1.; 1.;
+    |]) in
+    let buf = gl##createBuffer in
+    gl##bindBuffer gl##._ARRAY_BUFFER_ buf;
+    gl##bufferData gl##._ARRAY_BUFFER_ data gl##._STATIC_DRAW_;
+    buf
+;;
+
+let vertex_src = {|
+  attribute vec3 pos;
+  attribute vec2 tex;
+
+  uniform mat4 proj;
+  uniform mat4 view;
+  uniform float time;
+
+  varying vec2 texcoord;
+
+  mat4 rotationMatrix(vec3 axis, float angle)
+  {
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+
+    return mat4(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,
+                oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,
+                oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
+                0.0,                                0.0,                                0.0,                                1.0);
+  }
+
+  void main() {
+      mat4 rot = rotationMatrix(vec3(0, 1, 0), time);
+      gl_Position = proj * view * rot * vec4(pos, 1);
+      texcoord = tex;
+  }
+|};;
+
+let fragment_src = {|
+  precision highp float;
+  varying vec2 texcoord;
+  uniform sampler2D texture;
+  void main() {
+      gl_FragColor = texture2D(texture, vec2(1.0 - texcoord.x, texcoord.y));
+  }
+|};;
+
+let perspective fov aspect near far =
+    let d2r = Float.pi /. 180. in
+    let y_scale = 1. /. Float.(tan (d2r*.fov /. 2.)) in
+    let x_scale = y_scale /. aspect in
+    let near_far = near -. far in
+    new%js Typed_array.float32Array_fromArray (Js.array [|
+        x_scale; 0.; 0.; 0.;
+        0.; y_scale; 0.; 0.;
+        0.; 0.; (far +. near) /. near_far; ~-.1.;
+        0.; 0.; 2.*.far*.near /. near_far; 0.;
+    |])
+;;
+
+module V3 = struct
+    type t = {x:float; y:float; z:float}
+    let mk x y z = {x;y;z};;
+    let len v = Float.sqrt (v.x*.v.x +. v.y*.v.y +. v.z*.v.z);;
+    let norm v =
+        let l = len v in
+        { x = v.x/.l; y = v.y/.l; z = v.z/.l };;
+    let sub v1 v2 = {x=v1.x-.v2.x; y=v1.y-.v2.y; z=v1.z-.v2.z};;
+    let cross v1 v2 = {
+        x=v1.y*.v2.z -. v1.z*.v2.y;
+        y=v1.z*.v2.x -. v1.x*.v2.z;
+        z=v1.x*.v2.y -. v1.y*.v2.x;
+    };;
+    let dot v1 v2 = v1.x*.v2.x +. v1.y*.v2.y +. v1.z*.v2.z;;
+end;;
+
+let look_at eye target up =
+  let open V3 in
+  let f = norm (sub target eye) in
+  let u = norm up in
+  let s = norm (cross f u) in
+  let u = cross s f in
+  new%js Typed_array.float32Array_fromArray (Js.array [|
+    s.x; u.x; ~-.(f.x); 0.;
+    s.y; u.y; ~-.(f.y); 0.;
+    s.z; u.z; ~-.(f.z); 0.;
+    ~-.(dot s eye); ~-.(dot u eye); (dot f eye); 1.;
+  |])
+;;
+
+let cube_prog, cubePos, cubeTex, texLoc, projLoc, viewLoc, timeLoc =
+    let vertex = gl##createShader gl##._VERTEX_SHADER_ in
+    let frag = gl##createShader gl##._FRAGMENT_SHADER_ in
+
+    gl##shaderSource vertex (Js.string vertex_src);
+    gl##shaderSource frag (Js.string fragment_src);
+
+    gl##compileShader vertex;
+    gl##compileShader frag;
+
+    if not (gl##getShaderParameter vertex gl##._COMPILE_STATUS_ |> Js.to_bool) then (
+        print_endline "Failed to compile vertex program";
+        let info = gl##getShaderInfoLog vertex in
+        print_endline Js.(to_string info);
+    );
+
+
+    if not (gl##getShaderParameter frag gl##._COMPILE_STATUS_ |> Js.to_bool) then (
+        print_endline "Failed to compile fragment program";
+        let info = gl##getShaderInfoLog frag in
+        print_endline Js.(to_string info);
+    );
+
+    let prog = gl##createProgram in
+    gl##attachShader prog vertex;
+    gl##attachShader prog frag;
+    gl##linkProgram prog;
+
+    if not (gl##getProgramParameter prog gl##._LINK_STATUS_ |> Js.to_bool) then (
+        print_endline "Failed to link program"
+    );
+
+    let cube_pos = gl##getAttribLocation prog (Js.string "pos") in
+    let cube_tex = gl##getAttribLocation prog (Js.string "tex") in
+
+    let tex_loc = gl##getUniformLocation prog (Js.string "texture") in
+    let proj_loc = gl##getUniformLocation prog (Js.string "proj") in
+    let view_loc = gl##getUniformLocation prog (Js.string "view") in
+    let time_loc = gl##getUniformLocation prog (Js.string "time") in
+
+    prog, cube_pos, cube_tex, tex_loc, proj_loc, view_loc, time_loc
+;;
+
+let draw_cube aspect proj view time =
+    gl##useProgram cube_prog;
+
+    gl##enableVertexAttribArray cubePos;
+    gl##bindBuffer gl##._ARRAY_BUFFER_ cubePosBuf;
+    gl##vertexAttribPointer cubePos 3 gl##._FLOAT Js._false 0 0;
+    gl##enableVertexAttribArray cubeTex;
+    gl##bindBuffer gl##._ARRAY_BUFFER_ cubeTexBuf;
+    gl##vertexAttribPointer cubeTex 2 gl##._FLOAT Js._false 0 0;
+
+    gl##uniform1i texLoc 0;
+    gl##uniformMatrix4fv_typed projLoc Js._false proj;
+    gl##uniformMatrix4fv_typed viewLoc Js._false view;
+    gl##uniform1f timeLoc time;
+
+    gl##drawArrays gl##._TRIANGLES 0 36;
+;;
+
+let rec render_hello vg (time : float) =
+    gl##bindFramebuffer gl##._FRAMEBUFFER fb;
+    gl##bindTexture_ gl##._TEXTURE_2D_ Js.null;
+
+    gl##viewport 0 0 256 256;
+    gl##clearColor 0.3 0.3 0.32 1.;
+
+    gl##clear (
+        gl##._COLOR_BUFFER_BIT_
+        lor gl##._DEPTH_BUFFER_BIT_
+        lor gl##._STENCIL_BUFFER_BIT_
+    );
+
+    begin_frame vg
+        ~width:256.
+        ~height:256.
+        ~device_ratio:1.
+        ;
+
+    Path.begin_ vg;
+    Path.rect vg ~x:16. ~y:16. ~w:(256. -. 32.) ~h:(256. -. 32.);
+    set_fill_color vg ~color:Color.(rgba ~r:154 ~g:203 ~b:255 ~a:200);
+    fill vg;
+
+    Transform.translate vg ~x:128. ~y:128.;
+    Transform.rotate vg ~angle:(time *. 0.002);
+
+    Text.set_font_face vg ~name:"sans";
+    Text.set_size vg ~size:32.;
+    Text.set_align vg ~align:Align.(center lor middle);
+    set_fill_color vg ~color:Color.white;
+    Text.text vg ~x:0. ~y:0. "Hello World!";
+
+    end_frame vg
+;;
+
+let _ =
+    let vg = create
+        ~flags:CreateFlags.(antialias lor stencil_strokes)
+        gl
+    in
+
+    (* File in this case is actually the CSS font name *)
+    Text.create vg ~name:"sans" ~file:"arial" |> ignore;
+
+    let win_w = canvas##.width in
+    let win_h = canvas##.height in
+
+    let f_w = float win_w in
+    let f_h = float win_h in
+
+
+    let aspect = f_w /. f_h in
+    let proj = perspective 60. aspect 0.1 100. in
+    let view = look_at V3.(mk 0. 0.8 2.) V3.(mk 0. 0. 0.) V3.(mk 0. 1. 0.) in
+
+    let rec render now =
+        render_hello vg now;
+
+        gl##bindFramebuffer_ gl##._FRAMEBUFFER Js.null;
+        gl##bindTexture gl##._TEXTURE_2D_ texture;
+        gl##viewport 0 0 win_w win_h;
+
+        gl##clearColor 0.1 0.1 0.105 1.;
+        gl##clear (
+            gl##._COLOR_BUFFER_BIT_
+            lor gl##._DEPTH_BUFFER_BIT_
+            lor gl##._STENCIL_BUFFER_BIT_
+        );
+
+        gl##enable gl##._DEPTH_TEST_;
+
+        draw_cube aspect proj view (now /. 1000. *. 0.25);
 
         Dom_html.window##requestAnimationFrame (Js.wrap_callback render)
         |> ignore;
