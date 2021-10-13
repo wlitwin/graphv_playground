@@ -12,12 +12,25 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.1/css/bootstrap.min.css" integrity="sha512-6KY5s6UI5J7SVYuZB4S/CZMyPylqyyNZco376NM2Z8Sb8OxEdp02e1jkKk/wZxIEmjQ6DRCEBhni+gpr9c4tvA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.13/keybinding-vim.min.js" integrity="sha512-xp5tDiJMTiTOG6fjhMjNGaV3zw+kyaHq53hWvc5XrMvj/Pe/EOaby08LVHJp50xCE4VFF9rnJpRP4+JJyelGvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.13/keybinding-emacs.min.js" integrity="sha512-1Z4E+xA+twF7jPCjJSFpeywof+mG40O66/pLMnAElym2Bu34nUTtTRQZG/eDkGIrp+bORyr2Ej2BWd6/sJBMWA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/split.js/1.6.4/split.min.js" integrity="sha512-HwVfwWgxD3SrpYgpIEGapjIid6YzmKiY4lwoc55rbO/6Y/2ZSgy6PX7zYUV5wqBD4hTsHzDovN6HqEzc/68lUg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
 
-#top-div {
+#split {
     display: flex;
     flex-direction: row;
     height: 100%;
+}
+
+.gutter {
+    background-color: #555;
+    border-radius: 0.2rem;
+    background-repeat: no-repeat;
+    background-position: 50%;
+}
+
+.gutter.gutter-horizontal {
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==');
+    cursor: col-resize;
 }
 
 #editor-wrapper {
@@ -98,6 +111,10 @@ body {
     color: white;
 }
 
+a:hover {
+    color: lightgray !important;
+}
+
 #title-area {
     display: flex;
     padding: 0.25em;
@@ -112,7 +129,12 @@ body {
     justify-items: center;
 }
 
+select:hover {
+    background-color: #5c636a;
+}
+
 select {
+    cursor: pointer;
     align-self: center;
     background-color: #6c757d;
     line-height: 1.5;
@@ -142,6 +164,7 @@ select option:disabled {
     border-radius: 0.35rem;
     border: 1px solid black;
     padding: 0.25rem;
+    display: none;
 }
 
 #warn-icon {
@@ -158,6 +181,10 @@ select option:disabled {
     margin-top: auto;
     font-size: 1.15rem;
     margin-right: 1rem;
+}
+
+#warn-link {
+    color: white;
 }
 
 </style>
@@ -178,10 +205,10 @@ select option:disabled {
         <option value="bouncing_rects">Bouncing Rectangles</option>
         <option value='preserve_drawing'>Preserve Drawing</option>
     </select>
-    <div id='warning'><span id='warn-icon'>⚠</span><div>Firefox seems to have long load times ☹, looking into ways of improving that.</div></div>
+    <div id='warning'><span id='warn-icon'>⚠</span><div style='align-self:center'>Firefox 94 and below have long load times. See this bug: <a id='warn-link' href='https://bugzilla.mozilla.org/show_bug.cgi?id=1734087'>Bug 1734087</a>.</div></div>
     <div id='compile-time-text'></div>
     </div>
-    <div id='top-div'>
+    <div id='split'>
         <div id='controls'>
             <div id='editor-wrapper'>
                 <div id='editor'></div>
@@ -191,6 +218,33 @@ select option:disabled {
     </div>
 
     <script defer type='text/javascript'>
+        function checkFirefox() {
+            var isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+            if (isFirefox) {
+                var match = window.navigator.userAgent.match(/Firefox\/([0-9]+)\./);
+                var ver = match ? parseInt(match[1]) : 0;
+
+                if (!ver || ver < 95) {
+                    document.getElementById('warning').style.display = 'flex';
+                }
+            }
+        }
+
+        checkFirefox();
+
+        function getGutterSize() {
+            var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            if (isMobile) {
+                return 20;
+            } else {
+                return 10;
+            }
+        }
+
+        Split(['#controls', '#canvas-wrapper'], {
+            gutterSize: getGutterSize(),
+        });
+
         var editor = ace.edit('editor');
         var modified_code = false;
         editor.setOptions({

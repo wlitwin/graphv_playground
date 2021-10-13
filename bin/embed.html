@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
     <head>
         <meta charset='utf-8'>
@@ -61,6 +62,8 @@ pre {
     border-radius: 4px;
     border: 1px solid black;
     line-height: 1rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 
 summary {
@@ -143,7 +146,7 @@ details[open] summary:after {
         <div id='about'>
             <div>
                 <h2 style='margin-top: 1rem; margin-bottom:0; font-size:1.4rem'>About</h2>
-                <p>Paste code into the left editor or select an example from the drop down, then click the run button. Once compiled the render will show on the right-side canvas. Any errors will be shown in the "Standard Error" details pane, which automatically expands on errors. The following variables come predefined when the code is loaded:
+                <p>Paste code into the left editor or select an example from the drop down, then click the run button. Once compiled the render will show on the right-side canvas. Any errors will be shown in the "Standard Error" details pane, which automatically expands on errors. Compile times should be less than 5s. The 'Render Texture' example takes a bit longer (10s) because it's a larger sample. The following variables come predefined when the code is loaded:
                 </p>
                 <p>
                 <pre>canvas : Dom_html.canvasElement Js.t</pre> A reference to the drawing canvas DOM element.
